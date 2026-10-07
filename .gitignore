@@ -1,0 +1,17 @@
+# Visual Studio — lokalne ustawienia
+.vs/
+*.user
+*.suo
+
+# .NET — wyniki kompilacji i pliki tymczasowe
+[Bb]in/
+[Oo]bj/
+
+# Wyniki testów
+TestResults/
+coverage/
+
+# Lokalna konfiguracja
+.env
+.env.*
+!.env.example
