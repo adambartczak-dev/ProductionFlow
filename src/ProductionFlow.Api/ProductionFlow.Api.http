@@ -1,6 +1,21 @@
-@ProductionFlow.Api_HostAddress = http://localhost:5041
+@baseUrl = http://localhost:5041
 
-GET {{ProductionFlow.Api_HostAddress}}/weatherforecast/
+### Poprawne dane — HTTP 200
+GET {{baseUrl}}/api/learning/orders/1
 Accept: application/json
 
-###
+### Opcjonalne uwagi — HTTP 200, notes: null
+GET {{baseUrl}}/api/learning/orders/2
+Accept: application/json
+
+### Brak danych — HTTP 404
+GET {{baseUrl}}/api/learning/orders/999
+Accept: application/json
+
+### Niepoprawny identyfikator — HTTP 400
+GET {{baseUrl}}/api/learning/orders/0
+Accept: application/json
+
+### Symulowana awaria źródła — HTTP 503
+GET {{baseUrl}}/api/learning/orders/1?simulateFailure=true
+Accept: application/json

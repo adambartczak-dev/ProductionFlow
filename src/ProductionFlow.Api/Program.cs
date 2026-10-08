@@ -1,23 +1,20 @@
+using ProductionFlow.Api.Learning;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<LearningOrderService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
+// Na tym etapie uruchamiamy ćwiczenia lokalnie przez HTTP.
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
