@@ -1,0 +1,77 @@
+
+name: ProductionFlow CI
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test (.NET 10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+    steps:
+      # 1. Pobranie kodu repozytorium
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # 2. Instalacja .NET SDK
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # 3. Sprawdzenie narzędzi
+      - name: Verify environment
+        run: |
+          dotnet --version
+          docker version
+
+      # 4. Przywrócenie pakietów NuGet
+      - name: Restore dependencies
+        run: dotnet restore ./ProductionFlow.sln
+
+      # 5. Kompilacja całego rozwiązania
+      - name: Build solution
+        run: dotnet build ./ProductionFlow.sln --configuration Release --no-restore
+
+      # 6. Testy jednostkowe
+      - name: Run unit tests
+        run: >-
+          dotnet test ./tests/ProductionFlow.UnitTests/ProductionFlow.UnitTests.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          --logger "trx;LogFileName=unit-tests.trx"
+          --results-directory ./TestResults/UnitTests
+
+      # 7. Testy integracyjne z PostgreSQL
+      - name: Run integration tests
+        run: >-
+          dotnet test ./tests/ProductionFlow.IntegrationTests/ProductionFlow.IntegrationTests.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          --logger "trx;LogFileName=integration-tests.trx"
+          --results-directory ./TestResults/IntegrationTests
+
+      # 8. Zachowanie wyników testów
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 7

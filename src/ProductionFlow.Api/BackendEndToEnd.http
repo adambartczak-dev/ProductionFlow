@@ -3,9 +3,9 @@
 
 # Po utworzeniu produktu, stanowiska i zlecenia
 # zastąp poniższe wartości rzeczywistymi Id.
-@productId = 00000000-0000-0000-0000-000000000000
-@workCenterId = 00000000-0000-0000-0000-000000000000
-@orderId = 00000000-0000-0000-0000-000000000000
+@productId = cff9beb5-76ac-44d2-8a58-f5fa90d770e7
+@workCenterId = 20fcfded-11da-4810-92aa-3f0900162909
+@orderId = 9ff9288f-5237-4995-a302-3db102ee3a45
 
 
 ### 1. Utworzenie produktu
