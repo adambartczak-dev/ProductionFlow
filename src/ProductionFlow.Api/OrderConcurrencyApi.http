@@ -1,0 +1,85 @@
+
+@baseUrl = http://localhost:5041
+
+# Uzupełnij prawdziwe identyfikatory
+# na podstawie GET /api/products i /api/workcenters.
+@productId = d034b22e-273b-4caf-bbbd-bcceda274570
+@workCenterId = 97b1c0db-9fc7-4e09-9c0b-be90bcb00b22
+
+# Wklej Id z odpowiedzi pierwszego POST.
+@orderId = 205c9633-9862-424b-825f-b1d93464d103
+
+
+### 1. Utworzenie zlecenia testowego
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-CONC-001",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 100,
+  "dueDate": "2026-12-20"
+}
+
+
+### 2. Zwolnienie zlecenia
+POST {{baseUrl}}/api/orders/{{orderId}}/release
+
+
+### 3. Rozpoczęcie produkcji
+POST {{baseUrl}}/api/orders/{{orderId}}/start
+
+
+### 4. Pierwszy raport - 60 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-initial",
+  "goodQuantity": 60,
+  "scrapQuantity": 0
+}
+
+
+### 5. Sprawdzenie postępu - powinno być 60%
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 6. Test blokady - próba zbyt wczesnego Complete
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 7. Sprawdzenie postępu po testach równoległych
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 8. Historia raportów
+GET {{baseUrl}}/api/orders/{{orderId}}/reports
+Accept: application/json
+
+
+### 9. Rozliczenie pozostałych 10 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-final",
+  "goodQuantity": 10,
+  "scrapQuantity": 0
+}
+
+
+### 10. Zakończenie zlecenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 11. Końcowy postęp
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 12. Ponowne zakończenie - konflikt
+POST {{baseUrl}}/api/orders/{{orderId}}/complete

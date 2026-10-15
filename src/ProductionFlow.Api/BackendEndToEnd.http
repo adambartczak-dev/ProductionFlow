@@ -1,0 +1,180 @@
+
+@baseUrl = http://localhost:5041
+
+# Po utworzeniu produktu, stanowiska i zlecenia
+# zastąp poniższe wartości rzeczywistymi Id.
+@productId = 00000000-0000-0000-0000-000000000000
+@workCenterId = 00000000-0000-0000-0000-000000000000
+@orderId = 00000000-0000-0000-0000-000000000000
+
+
+### 1. Utworzenie produktu
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "code": "PF-D15-P-001",
+  "name": "Obudowa sterownika"
+}
+
+
+### 2. Utworzenie stanowiska
+POST {{baseUrl}}/api/workcenters
+Content-Type: application/json
+
+{
+  "code": "PF-D15-WC-001",
+  "name": "Stanowisko montażowe"
+}
+
+
+### 3. Utworzenie zlecenia produkcyjnego
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-D15-ORDER-001",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 100,
+  "dueDate": "2026-12-20"
+}
+
+
+### 4. Pobranie utworzonego zlecenia
+GET {{baseUrl}}/api/orders/{{orderId}}
+Accept: application/json
+
+
+### 5. Próba Start bez Release (błąd)
+POST {{baseUrl}}/api/orders/{{orderId}}/start
+
+
+### 6. Zwolnienie zlecenia do produkcji
+POST {{baseUrl}}/api/orders/{{orderId}}/release
+
+
+### 7. Rozpoczęcie produkcji
+POST {{baseUrl}}/api/orders/{{orderId}}/start
+
+
+### 8. Próba zakończenia bez raportów (błąd)
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 9. Raport przekraczający plan (błąd)
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 101,
+  "scrapQuantity": 0
+}
+
+
+### 10. Pierwszy poprawny raport — 60 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 57,
+  "scrapQuantity": 3
+}
+
+
+### 11. Sprawdzenie postępu — 60%
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 12. Drugi poprawny raport — 40 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 38,
+  "scrapQuantity": 2
+}
+
+
+### 13. Sprawdzenie postępu — 100%
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 14. Zakończenie zlecenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 15. Sprawdzenie statusu Completed
+GET {{baseUrl}}/api/orders/{{orderId}}
+Accept: application/json
+
+
+### 16. Pobranie raportów
+GET {{baseUrl}}/api/orders/{{orderId}}/reports
+Accept: application/json
+
+
+### 17. Pobranie pełnej historii zmian
+GET {{baseUrl}}/api/orders/{{orderId}}/history
+Accept: application/json
+
+
+### 18. Ponowne zakończenie (błąd)
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 19. Próba raportowania po zakończeniu (błąd)
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 1,
+  "scrapQuantity": 0
+}
+
+
+### 20. Sprawdzenie historii po błędnych operacjach
+GET {{baseUrl}}/api/orders/{{orderId}}/history
+Accept: application/json
+
+
+### 21. Filtrowanie zakończonych zleceń
+GET {{baseUrl}}/api/orders?status=Completed&search=PF-D15&sortBy=number&sortDirection=asc&page=1&pageSize=10
+Accept: application/json
+
+
+### 22. Próba ponownego użycia numeru zlecenia
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-D15-ORDER-001",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 100,
+  "dueDate": "2026-12-20"
+}
+
+
+### 23. Nieprawidłowa ilość planowana
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-D15-INVALID-001",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 0,
+  "dueDate": "2026-12-20"
+}
+
+
+### 24. Historia nieistniejącego zlecenia
+GET {{baseUrl}}/api/orders/11111111-1111-1111-1111-111111111111/history
+Accept: application/json

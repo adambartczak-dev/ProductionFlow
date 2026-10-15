@@ -1,0 +1,149 @@
+
+@baseUrl = http://localhost:5041
+
+# Wklej Id zlecenia PF-STATUS-001 z Dnia 11.
+@orderId = 8396aee2-722c-49c3-9400-a76a821bb7ca
+
+# Po dodaniu pierwszego raportu wklej jego Id.
+@reportId = 1ace46f6-5b39-4586-98e1-efe77fe9a948
+
+
+### 1. Sprawdzenie początkowego postępu
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 2. Próba zakończenia nierozliczonego zlecenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 3. Błędny raport - obie ilości zero
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 0,
+  "scrapQuantity": 0
+}
+
+
+### 4. Błędny raport - ujemna ilość
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": -5,
+  "scrapQuantity": 0
+}
+
+
+### 5. Błędny raport - pusty operator
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "",
+  "goodQuantity": 10,
+  "scrapQuantity": 0
+}
+
+
+### 6. Raport przekraczający planowane 100 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 101,
+  "scrapQuantity": 0
+}
+
+
+### 7. Pierwszy poprawny raport - 60 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 57,
+  "scrapQuantity": 3
+}
+
+
+### 8. Sprawdzenie postępu po pierwszym raporcie
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 9. Pobranie historii raportów
+GET {{baseUrl}}/api/orders/{{orderId}}/reports
+Accept: application/json
+
+
+### 10. Pobranie pierwszego raportu po Id
+GET {{baseUrl}}/api/orders/{{orderId}}/reports/{{reportId}}
+Accept: application/json
+
+
+### 11. Próba przekroczenia pozostałych 40 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 41,
+  "scrapQuantity": 0
+}
+
+
+### 12. Drugi poprawny raport - pozostałe 40 sztuk
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 38,
+  "scrapQuantity": 2
+}
+
+
+### 13. Sprawdzenie postępu 100 procent
+GET {{baseUrl}}/api/orders/{{orderId}}/progress
+Accept: application/json
+
+
+### 14. Zakończenie zlecenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 15. Odczyt zakończonego zlecenia
+GET {{baseUrl}}/api/orders/{{orderId}}
+Accept: application/json
+
+
+### 16. Próba ponownego zakończenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 17. Próba raportowania po zakończeniu
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 1,
+  "scrapQuantity": 0
+}
+
+
+### 18. Próba raportowania nieistniejącego zlecenia
+POST {{baseUrl}}/api/orders/11111111-1111-1111-1111-111111111111/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 10,
+  "scrapQuantity": 0
+}

@@ -3,10 +3,15 @@
 public sealed class WorkCenter
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
-    public string Code { get; private set; }
-    public string Name { get; private set; }
+    public string Code { get; private set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
 
     public WorkCenter(string code, string name)
+    {
+        EditDetails(code, name);
+    }
+
+    public void EditDetails(string code, string name)
     {
         if (string.IsNullOrWhiteSpace(code))
         {

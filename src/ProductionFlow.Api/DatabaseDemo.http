@@ -1,0 +1,9 @@
+@baseUrl = http://localhost:5041
+
+### Zapis danych demonstracyjnych
+POST {{baseUrl}}/api/learning/database-demo
+Accept: application/json
+
+### Odczyt danych z bazy
+GET {{baseUrl}}/api/learning/database-demo
+Accept: application/json

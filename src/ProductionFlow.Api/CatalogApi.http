@@ -1,0 +1,106 @@
+
+@baseUrl = http://localhost:5041
+
+# Po wykonaniu POST wklej tutaj otrzymane identyfikatory.
+@productId = d034b22e-273b-4caf-bbbd-bcceda274570
+@workCenterId = 97b1c0db-9fc7-4e09-9c0b-be90bcb00b22
+
+
+### 1. Pobierz wszystkie produkty
+GET {{baseUrl}}/api/products
+Accept: application/json
+
+
+### 2. Dodaj produkt
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "code": "P-API-001",
+  "name": "Obudowa testowa API"
+}
+
+
+### 3. Pobierz produkt po Id
+GET {{baseUrl}}/api/products/{{productId}}
+Accept: application/json
+
+
+### 4. Edytuj produkt
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: application/json
+
+{
+  "code": "P-API-001",
+  "name": "Obudowa po edycji"
+}
+
+
+### 5. Próba dodania duplikatu produktu
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "code": "P-API-001",
+  "name": "Produkt o tym samym kodzie"
+}
+
+
+### 6. Nieprawidłowe dane produktu
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "code": "",
+  "name": "Nieprawidłowy produkt"
+}
+
+
+### 7. Pobierz wszystkie stanowiska
+GET {{baseUrl}}/api/workcenters
+Accept: application/json
+
+
+### 8. Dodaj stanowisko
+POST {{baseUrl}}/api/workcenters
+Content-Type: application/json
+
+{
+  "code": "WC-API-01",
+  "name": "Montaż testowy API"
+}
+
+
+### 9. Pobierz stanowisko po Id
+GET {{baseUrl}}/api/workcenters/{{workCenterId}}
+Accept: application/json
+
+
+### 10. Edytuj stanowisko
+PUT {{baseUrl}}/api/workcenters/{{workCenterId}}
+Content-Type: application/json
+
+{
+  "code": "WC-API-01",
+  "name": "Montaż po edycji"
+}
+
+
+### 11. Próba dodania duplikatu stanowiska
+POST {{baseUrl}}/api/workcenters
+Content-Type: application/json
+
+{
+  "code": "WC-API-01",
+  "name": "Stanowisko o tym samym kodzie"
+}
+
+
+### 12. Nieprawidłowe dane stanowiska
+POST {{baseUrl}}/api/workcenters
+Content-Type: application/json
+
+{
+  "code": "",
+  "name": "Nieprawidłowe stanowisko"
+}

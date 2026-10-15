@@ -1,0 +1,88 @@
+
+@baseUrl = http://localhost:5041
+
+# Uzupełnij na podstawie GET /api/products
+# oraz GET /api/workcenters.
+@productId = d034b22e-273b-4caf-bbbd-bcceda274570
+@workCenterId = 97b1c0db-9fc7-4e09-9c0b-be90bcb00b22
+
+# Po utworzeniu zlecenia wklej jego Id.
+@orderId = 2ffde0d6-1e47-423e-a891-8877f7028f93
+
+
+### 1. Utworzenie zlecenia testowego
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-HISTORY-001",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 100,
+  "dueDate": "2026-12-20"
+}
+
+
+### 2. Historia po utworzeniu zlecenia
+GET {{baseUrl}}/api/orders/{{orderId}}/history
+Accept: application/json
+
+
+### 3. Zwolnienie zlecenia do produkcji
+POST {{baseUrl}}/api/orders/{{orderId}}/release
+
+
+### 4. Rozpoczęcie produkcji
+POST {{baseUrl}}/api/orders/{{orderId}}/start
+
+
+### 5. Dodanie raportu produkcyjnego
+POST {{baseUrl}}/api/orders/{{orderId}}/reports
+Content-Type: application/json
+
+{
+  "operatorId": "operator-1",
+  "goodQuantity": 95,
+  "scrapQuantity": 5
+}
+
+
+### 6. Zakończenie zlecenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 7. Pobranie pełnej historii
+GET {{baseUrl}}/api/orders/{{orderId}}/history
+Accept: application/json
+
+
+### 8. Próba ponownego zakończenia
+POST {{baseUrl}}/api/orders/{{orderId}}/complete
+
+
+### 9. Historia po odrzuconej operacji
+GET {{baseUrl}}/api/orders/{{orderId}}/history
+Accept: application/json
+
+
+### 10. Historia nieistniejącego zlecenia
+GET {{baseUrl}}/api/orders/11111111-1111-1111-1111-111111111111/history
+Accept: application/json
+
+
+### 11. Nieprawidłowe dane nowego zlecenia
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 0,
+  "dueDate": "2026-12-20"
+}
+
+
+### 12. Nieistniejący endpoint
+GET {{baseUrl}}/api/not-existing
+Accept: application/json

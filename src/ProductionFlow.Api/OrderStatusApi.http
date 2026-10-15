@@ -1,0 +1,110 @@
+
+@baseUrl = http://localhost:5041
+
+# Wklej identyfikatory produktu i stanowiska
+# z poprzednich dni.
+@productId = d034b22e-273b-4caf-bbbd-bcceda274570
+@workCenterId = 97b1c0db-9fc7-4e09-9c0b-be90bcb00b22
+
+# Uzupełnij po utworzeniu trzech zleceń.
+@transitionOrderId = 8396aee2-722c-49c3-9400-a76a821bb7ca
+@cancelDraftOrderId = 6eae5031-f5dd-402e-9ab1-81b874d9a237
+@cancelReleasedOrderId = d1d6178b-b790-4ede-9d4e-a3cdc9204ab7
+
+
+### 1. Utworzenie zlecenia do zmiany statusów
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-STATUS-001",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 100,
+  "dueDate": "2026-12-15"
+}
+
+
+### 2. Utworzenie zlecenia do anulowania z Draft
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-STATUS-002",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 150,
+  "dueDate": "2026-12-16"
+}
+
+
+### 3. Utworzenie zlecenia do anulowania z Released
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "number": "PF-STATUS-003",
+  "productId": "{{productId}}",
+  "workCenterId": "{{workCenterId}}",
+  "plannedQuantity": 200,
+  "dueDate": "2026-12-17"
+}
+
+
+### 4. Pobranie pierwszego zlecenia
+GET {{baseUrl}}/api/orders/{{transitionOrderId}}
+Accept: application/json
+
+
+### 5. Nieprawidłowe Start ze statusu Draft
+POST {{baseUrl}}/api/orders/{{transitionOrderId}}/start
+
+
+### 6. Poprawne Release
+POST {{baseUrl}}/api/orders/{{transitionOrderId}}/release
+
+
+### 7. Ponowne Release - niedozwolone
+POST {{baseUrl}}/api/orders/{{transitionOrderId}}/release
+
+
+### 8. Poprawne Start
+POST {{baseUrl}}/api/orders/{{transitionOrderId}}/start
+
+
+### 9. Próba Cancel ze statusu InProgress
+POST {{baseUrl}}/api/orders/{{transitionOrderId}}/cancel
+
+
+### 10. Sprawdzenie statusu InProgress
+GET {{baseUrl}}/api/orders/{{transitionOrderId}}
+Accept: application/json
+
+
+### 11. Anulowanie zlecenia Draft
+POST {{baseUrl}}/api/orders/{{cancelDraftOrderId}}/cancel
+
+
+### 12. Ponowne anulowanie - niedozwolone
+POST {{baseUrl}}/api/orders/{{cancelDraftOrderId}}/cancel
+
+
+### 13. Próba Release anulowanego zlecenia
+POST {{baseUrl}}/api/orders/{{cancelDraftOrderId}}/release
+
+
+### 14. Release trzeciego zlecenia
+POST {{baseUrl}}/api/orders/{{cancelReleasedOrderId}}/release
+
+
+### 15. Cancel ze statusu Released
+POST {{baseUrl}}/api/orders/{{cancelReleasedOrderId}}/cancel
+
+
+### 16. Odczyt anulowanego zlecenia
+GET {{baseUrl}}/api/orders/{{cancelReleasedOrderId}}
+Accept: application/json
+
+
+### 17. Zmiana statusu nieistniejącego zlecenia
+POST {{baseUrl}}/api/orders/11111111-1111-1111-1111-111111111111/release
