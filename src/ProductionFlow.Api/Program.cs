@@ -8,22 +8,56 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ProductionFlow.Api.Authorization;
 using ProductionFlow.Api.Data;
+using ProductionFlow.Api.Diagnostics;
 using ProductionFlow.Api.Identity;
 using ProductionFlow.Api.Learning;
+using ProductionFlow.Api.Realtime;
+using Serilog;
+using Serilog.Events;
+
+// Konfiguracja Serilog z Dnia 36.
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override(
+        "Microsoft",
+        LogEventLevel.Warning)
+    .MinimumLevel.Override(
+        "Microsoft.Hosting.Lifetime",
+        LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(
+        outputTemplate:
+            "[{Timestamp:HH:mm:ss} {Level:u3}] " +
+            "{Message:lj} | RequestId={RequestId}" +
+            "{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// REST API i globalna ochrona CSRF.
+builder.Host.UseSerilog();
+
+// REST API i ochrona CSRF.
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(
         new AutoValidateAntiforgeryTokenAttribute());
+
+    // NOWE: powiadomienia po operacjach na zleceniach.
+    options.Filters.AddService<
+        ProductionOrderNotificationFilter>();
 });
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<LearningOrderService>();
+
+// NOWE: serwer SignalR.
+builder.Services.AddSignalR();
+
+// NOWE: filtr powiadomień.
+builder.Services.AddScoped<
+    ProductionOrderNotificationFilter>();
 
 // Połączenie z PostgreSQL.
 var connectionString = builder.Configuration
@@ -32,11 +66,9 @@ var connectionString = builder.Configuration
         "Brak connection stringa ProductionFlow. " +
         "Sprawdź konfigurację środowiska.");
 
-// Kontekst danych produkcyjnych.
 builder.Services.AddDbContext<ProductionFlowDbContext>(
     options => options.UseNpgsql(connectionString));
 
-// Kontekst użytkowników i ról Identity.
 builder.Services.AddDbContext<ProductionFlowIdentityDbContext>(
     options => options.UseNpgsql(
         connectionString,
@@ -64,7 +96,7 @@ builder.Services
     .AddEntityFrameworkStores<ProductionFlowIdentityDbContext>()
     .AddDefaultTokenProviders();
 
-// Zabezpieczenia cookie uwierzytelniającego.
+// Cookie uwierzytelniające.
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "ProductionFlow.Auth";
@@ -96,7 +128,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-// Tokeny przeciw CSRF.
+// Ochrona CSRF dla operacji HTTP.
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
@@ -111,7 +143,7 @@ builder.Services.AddAntiforgery(options =>
             : CookieSecurePolicy.Always;
 });
 
-// Ograniczenie liczby żądań logowania.
+// Ograniczenie prób logowania.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode =
@@ -131,7 +163,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-// Polityka uprawnień.
+// Istniejąca polityka uprawnień biznesowych.
 var accessPolicy = new AuthorizationPolicyBuilder()
     .RequireAuthenticatedUser()
     .AddRequirements(new ProductionAccessRequirement())
@@ -141,6 +173,17 @@ builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = accessPolicy;
     options.FallbackPolicy = accessPolicy;
+
+    // NOWE: osobna polityka dla huba SignalR.
+    options.AddPolicy("ProductionRealtime", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+
+        policy.RequireRole(
+            ProductionFlowRoles.Admin,
+            ProductionFlowRoles.Planner,
+            ProductionFlowRoles.Operator);
+    });
 });
 
 builder.Services.AddScoped<
@@ -149,7 +192,46 @@ builder.Services.AddScoped<
 
 var app = builder.Build();
 
-// Centralna obsługa błędów.
+// Request ID z Dnia 36.
+app.UseMiddleware<RequestIdMiddleware>();
+
+// Logowanie żądań HTTP przez Serilog.
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} " +
+        "-> {StatusCode} w {Elapsed:0.0000} ms";
+
+    options.EnrichDiagnosticContext =
+        (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set(
+                "RequestId",
+                httpContext.TraceIdentifier);
+        };
+
+    options.IncludeQueryInRequestPath = false;
+
+    options.GetLevel = (httpContext, elapsed, exception) =>
+    {
+        if (
+            exception is not null ||
+            httpContext.Response.StatusCode >= 500
+        )
+        {
+            return LogEventLevel.Error;
+        }
+
+        if (httpContext.Response.StatusCode == 409)
+        {
+            return LogEventLevel.Warning;
+        }
+
+        return LogEventLevel.Information;
+    };
+});
+
+// Obsługa błędów.
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -166,24 +248,60 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Dotychczasowe endpointy REST API.
 app.MapControllers();
 
-// Endpoint wykorzystywany przez Docker healthcheck.
+// NOWE: endpoint komunikacji czasu rzeczywistego.
+app.MapHub<ProductionHub>("/hubs/production");
+
+// Sprawdzenie działania procesu API.
+app.MapGet("/health/live", () =>
+{
+    return Results.Ok(new
+    {
+        status = "alive"
+    });
+})
+.AllowAnonymous();
+
+// Sprawdzenie połączenia API z PostgreSQL.
 app.MapGet("/health", async (
     ProductionFlowDbContext db,
     CancellationToken cancellationToken) =>
 {
-    bool databaseAvailable =
-        await db.Database.CanConnectAsync(cancellationToken);
+    bool databaseAvailable;
 
-    return databaseAvailable
-        ? Results.Ok(new { status = "ok" })
-        : Results.StatusCode(
+    try
+    {
+        databaseAvailable =
+            await db.Database.CanConnectAsync(
+                cancellationToken);
+    }
+    catch (OperationCanceledException)
+        when (cancellationToken.IsCancellationRequested)
+    {
+        throw;
+    }
+    catch (Exception)
+    {
+        databaseAvailable = false;
+    }
+
+    if (!databaseAvailable)
+    {
+        return Results.StatusCode(
             StatusCodes.Status503ServiceUnavailable);
+    }
+
+    return Results.Ok(new
+    {
+        status = "ok",
+        database = "connected"
+    });
 })
 .AllowAnonymous();
 
-// Automatyczne przygotowanie lokalnego środowiska Docker.
+// Przygotowanie lokalnej bazy i kont demonstracyjnych.
 if (app.Environment.IsDevelopment())
 {
     bool applyMigrations = app.Configuration.GetValue<bool>(
@@ -194,26 +312,30 @@ if (app.Environment.IsDevelopment())
         await using var scope =
             app.Services.CreateAsyncScope();
 
-        // Migracje głównej bazy produkcyjnej.
         var productionDb = scope.ServiceProvider
             .GetRequiredService<ProductionFlowDbContext>();
 
         await productionDb.Database.MigrateAsync();
 
-        // Migracje ASP.NET Core Identity.
         var identityDb = scope.ServiceProvider
             .GetRequiredService<ProductionFlowIdentityDbContext>();
 
         await identityDb.Database.MigrateAsync();
 
-        // Przykładowe katalogi w pustej bazie.
-        await DevelopmentCatalogSeeder.SeedAsync(productionDb);
+        await DevelopmentCatalogSeeder.SeedAsync(
+            productionDb);
     }
 
-    // Konta demonstracyjne tylko w Development.
     await IdentityDataSeeder.SeedDevelopmentAsync(
         app.Services,
         app.Configuration);
 }
 
-app.Run();
+try
+{
+    app.Run();
+}
+finally
+{
+    Log.CloseAndFlush();
+}

@@ -11,6 +11,9 @@ import type {
 
 import "./OrdersPage.css";
 
+import { useOrdersLiveRevision }
+    from "../realtime/useOrdersLiveRevision";
+
 interface Props {
     onSessionExpired: () => void;
 }
@@ -26,6 +29,8 @@ export default function OperatorOrdersPage({
         useState<string | null>(null);
 
     const [reload, setReload] = useState(0);
+
+    const liveRevision = useOrdersLiveRevision();
 
     useEffect(() => {
         const controller = new AbortController();
@@ -70,7 +75,7 @@ export default function OperatorOrdersPage({
         void load();
 
         return () => controller.abort();
-    }, [onSessionExpired, reload]);
+    }, [onSessionExpired, reload, liveRevision]);
 
     return (
         <>

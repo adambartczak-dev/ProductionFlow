@@ -34,6 +34,9 @@ import type {
 
 import "./OrderDetailsPage.css";
 
+import { useOrdersLiveRevision }
+    from "../realtime/useOrdersLiveRevision";
+
 interface Props {
     user: AuthUser;
     onSessionExpired: () => void;
@@ -110,7 +113,10 @@ export default function OrderDetailsPage({
     const [scrapQuantity, setScrapQuantity] = useState("0");
 
     // Każde odświeżenie otrzymuje osobny klucz.
-    const requestKey = `${id ?? "missing"}:${reloadKey}`;
+    const liveRevision = useOrdersLiveRevision(id);
+
+    const requestKey =
+        `${id ?? "missing"}:${reloadKey}:${liveRevision}`;
 
     // Obliczamy ładowanie bez dodatkowego setState().
     const isLoading =

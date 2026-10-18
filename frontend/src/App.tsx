@@ -35,6 +35,9 @@ import "./App.css";
 import "./navigation.css";
 import "./auth.css";
 
+import ProductionRealtimeConnection
+    from "./realtime/ProductionRealtimeConnection";
+
 function App() {
     const [user, setUser] =
         useState<AuthUser | null>(null);
@@ -229,6 +232,8 @@ function App() {
 
     return (
         <div className="app">
+            <ProductionRealtimeConnection userId={user.id} />
+
             <header className="site-header">
                 <div className="header-inner">
                     <div>

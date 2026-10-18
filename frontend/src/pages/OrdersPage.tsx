@@ -15,6 +15,9 @@ import type {
 
 import "./OrdersPage.css";
 
+import { useOrdersLiveRevision }
+    from "../realtime/useOrdersLiveRevision";
+
 interface Props {
     onSessionExpired: () => void;
 }
@@ -54,6 +57,8 @@ export default function OrdersPage({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] =
         useState<string | null>(null);
+
+    const liveRevision = useOrdersLiveRevision();
 
     useEffect(() => {
         const controller = new AbortController();
@@ -132,7 +137,8 @@ export default function OrdersPage({
         page,
         pageSize,
         reloadKey,
-        onSessionExpired
+        onSessionExpired,
+        liveRevision
     ]);
 
     function handleSearch(

@@ -6,15 +6,23 @@ export default defineConfig({
     plugins: [react()],
 
     server: {
-        // Nie obserwujemy plików technicznych Visual Studio.
+        // Wykluczamy pliki indeksu Visual Studio.
         watch: {
             ignored: ["**/.vs/**"]
         },
 
         proxy: {
+            // Dotychczasowe REST API.
             "/api": {
                 target: "http://127.0.0.1:5041",
                 changeOrigin: true
+            },
+
+            // NOWE: SignalR oraz WebSocket.
+            "/hubs": {
+                target: "http://127.0.0.1:5041",
+                changeOrigin: true,
+                ws: true
             }
         }
     }
