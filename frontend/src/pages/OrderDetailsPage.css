@@ -1,0 +1,150 @@
+
+.details-card {
+    margin-bottom: 22px;
+}
+
+    .details-card h3 {
+        margin: 0 0 16px;
+    }
+
+.details-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+    .details-heading strong {
+        color: #1d4ed8;
+    }
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+    .details-grid dt {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .details-grid dd {
+        margin: 4px 0 0;
+        overflow-wrap: anywhere;
+        font-weight: 600;
+    }
+
+.details-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.details-card button {
+    padding: 11px 14px;
+    border: 0;
+    border-radius: 7px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+}
+
+    .details-card button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+.details-card .details-secondary {
+    background: #64748b;
+}
+
+.details-progress {
+    height: 15px;
+    overflow: hidden;
+    border-radius: 9px;
+    background: #e2e8f0;
+}
+
+    .details-progress > div {
+        background: #16a34a;
+        height: 100%;
+        transition: width .2s;
+    }
+
+.details-report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+
+    .details-report-grid label {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        font-weight: 600;
+    }
+
+    .details-report-grid input {
+        padding: 11px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        font: inherit;
+        min-width: 0;
+    }
+
+.details-error {
+    color: #b91c1c;
+}
+
+.details-success {
+    color: #166534;
+}
+
+.details-table-wrap {
+    overflow-x: auto;
+}
+
+.details-table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+}
+
+    .details-table th,
+    .details-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+        overflow-wrap: anywhere;
+    }
+
+.details-history {
+    padding-left: 22px;
+}
+
+    .details-history li {
+        margin: 0 0 18px;
+    }
+
+    .details-history span {
+        display: block;
+        margin-top: 4px;
+    }
+
+    .details-history small {
+        display: block;
+        color: #64748b;
+        margin-top: 3px;
+    }
+
+@media (max-width: 640px) {
+    .details-grid,
+    .details-report-grid {
+        grid-template-columns: 1fr;
+    }
+}

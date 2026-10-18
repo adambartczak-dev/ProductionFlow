@@ -29,7 +29,8 @@ builder.Services.AddScoped<LearningOrderService>();
 var connectionString = builder.Configuration
     .GetConnectionString("ProductionFlow")
     ?? throw new InvalidOperationException(
-        "Brak connection stringa ProductionFlow. Sprawdź User Secrets.");
+        "Brak connection stringa ProductionFlow. " +
+        "Sprawdź konfigurację środowiska.");
 
 // Kontekst danych produkcyjnych.
 builder.Services.AddDbContext<ProductionFlowDbContext>(
@@ -42,20 +43,18 @@ builder.Services.AddDbContext<ProductionFlowIdentityDbContext>(
         npgsql => npgsql.MigrationsHistoryTable(
             "__EFIdentityMigrationsHistory")));
 
-// Konfiguracja ASP.NET Core Identity.
+// ASP.NET Core Identity.
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     {
         options.User.RequireUniqueEmail = true;
 
-        // Wymagania dotyczące haseł.
         options.Password.RequiredLength = 10;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
         options.Password.RequireUppercase = true;
         options.Password.RequireNonAlphanumeric = true;
 
-        // Blokada konta po błędnych próbach.
         options.Lockout.DefaultLockoutTimeSpan =
             TimeSpan.FromMinutes(15);
 
@@ -80,7 +79,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.SlidingExpiration = true;
 
-    // REST API zwraca statusy HTTP zamiast przekierowań.
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.StatusCode =
@@ -133,7 +131,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-// Centralna polityka uprawnień z Dnia 18.
+// Polityka uprawnień.
 var accessPolicy = new AuthorizationPolicyBuilder()
     .RequireAuthenticatedUser()
     .AddRequirements(new ProductionAccessRequirement())
@@ -160,21 +158,59 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Routing wymagany przed limitowaniem endpointów.
-app.UseRouting();
+app.UseStaticFiles();
 
-// Sprawdzanie limitów żądań.
+app.UseRouting();
 app.UseRateLimiter();
 
-// Uwierzytelnianie i autoryzacja.
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-// Konta demonstracyjne tylko w Development.
+// Endpoint wykorzystywany przez Docker healthcheck.
+app.MapGet("/health", async (
+    ProductionFlowDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    bool databaseAvailable =
+        await db.Database.CanConnectAsync(cancellationToken);
+
+    return databaseAvailable
+        ? Results.Ok(new { status = "ok" })
+        : Results.StatusCode(
+            StatusCodes.Status503ServiceUnavailable);
+})
+.AllowAnonymous();
+
+// Automatyczne przygotowanie lokalnego środowiska Docker.
 if (app.Environment.IsDevelopment())
 {
+    bool applyMigrations = app.Configuration.GetValue<bool>(
+        "Database:ApplyMigrationsOnStartup");
+
+    if (applyMigrations)
+    {
+        await using var scope =
+            app.Services.CreateAsyncScope();
+
+        // Migracje głównej bazy produkcyjnej.
+        var productionDb = scope.ServiceProvider
+            .GetRequiredService<ProductionFlowDbContext>();
+
+        await productionDb.Database.MigrateAsync();
+
+        // Migracje ASP.NET Core Identity.
+        var identityDb = scope.ServiceProvider
+            .GetRequiredService<ProductionFlowIdentityDbContext>();
+
+        await identityDb.Database.MigrateAsync();
+
+        // Przykładowe katalogi w pustej bazie.
+        await DevelopmentCatalogSeeder.SeedAsync(productionDb);
+    }
+
+    // Konta demonstracyjne tylko w Development.
     await IdentityDataSeeder.SeedDevelopmentAsync(
         app.Services,
         app.Configuration);

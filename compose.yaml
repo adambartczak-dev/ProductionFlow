@@ -1,3 +1,4 @@
+
 name: productionflow
 
 services:
@@ -17,6 +18,43 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: src/ProductionFlow.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Database__ApplyMigrationsOnStartup: "true"
+      ConnectionStrings__ProductionFlow: "Host=postgres;Port=5432;Database=${POSTGRES_DB:?Uzupełnij POSTGRES_DB};Username=${POSTGRES_USER:?Uzupełnij POSTGRES_USER};Password=${POSTGRES_PASSWORD:?Uzupełnij POSTGRES_PASSWORD}"
+      DemoUsers__Admin__Password: ${DEMO_ADMIN_PASSWORD:?Uzupełnij DEMO_ADMIN_PASSWORD}
+      DemoUsers__Planner__Password: ${DEMO_PLANNER_PASSWORD:?Uzupełnij DEMO_PLANNER_PASSWORD}
+      DemoUsers__Operator__Password: ${DEMO_OPERATOR_PASSWORD:?Uzupełnij DEMO_OPERATOR_PASSWORD}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

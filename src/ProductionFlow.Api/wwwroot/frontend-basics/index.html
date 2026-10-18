@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>ProductionFlow - Zlecenie produkcyjne</title>
+
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="app.js"></script>
+</head>
+
+<body>
+    <header class="page-header">
+        <h1>ProductionFlow</h1>
+        <p>Panel zlecenia produkcyjnego</p>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <div class="order-header">
+                <div>
+                    <p class="eyebrow">Zlecenie produkcyjne</p>
+                    <h2>PF-0001</h2>
+                </div>
+
+                <span id="order-status" class="status-badge">
+                    W realizacji
+                </span>
+            </div>
+
+            <div class="statistics">
+                <div class="stat">
+                    <span>Plan</span>
+                    <strong id="planned-quantity">100</strong>
+                </div>
+
+                <div class="stat">
+                    <span>Dobre sztuki</span>
+                    <strong id="good-quantity">0</strong>
+                </div>
+
+                <div class="stat">
+                    <span>Braki</span>
+                    <strong id="scrap-quantity">0</strong>
+                </div>
+            </div>
+
+            <div class="progress-heading">
+                <span>Postęp produkcji</span>
+                <strong id="progress-percent">0%</strong>
+            </div>
+
+            <div class="progress-track"
+                 role="progressbar"
+                 aria-label="Postęp zlecenia"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-valuenow="0">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <p id="remaining-quantity" class="muted">
+                Pozostało 100 sztuk do rozliczenia.
+            </p>
+        </section>
+
+        <section class="card">
+            <h2>Nowy raport wykonania</h2>
+
+            <form id="report-form">
+                <div class="form-fields">
+                    <div class="field">
+                        <label for="good-input">Dobre sztuki</label>
+                        <input id="good-input"
+                               type="number"
+                               min="0"
+                               step="1"
+                               value="0"
+                               required>
+                    </div>
+
+                    <div class="field">
+                        <label for="scrap-input">Braki</label>
+                        <input id="scrap-input"
+                               type="number"
+                               min="0"
+                               step="1"
+                               value="0"
+                               required>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="report-button" type="submit">
+                        Dodaj raport
+                    </button>
+
+                    <button id="complete-button"
+                            type="button"
+                            disabled>
+                        Zakończ zlecenie
+                    </button>
+
+                    <button id="reset-button"
+                            type="button"
+                            class="secondary-button">
+                        Resetuj demo
+                    </button>
+                </div>
+            </form>
+
+            <p id="message" class="message"
+               role="status" aria-live="polite">
+                Wprowadź pierwszy raport wykonania.
+            </p>
+        </section>
+
+        <section class="card">
+            <h2>Produkty produkcyjne</h2>
+
+            <p class="muted">
+                Pobierz przykładowe produkty z pliku JSON.
+            </p>
+
+            <button id="load-products-button" type="button">
+                Pobierz produkty
+            </button>
+
+            <p id="products-message"
+               class="message"
+               role="status"
+               aria-live="polite">
+                Lista produktów nie została jeszcze pobrana.
+            </p>
+
+            <ul id="products-list"></ul>
+        </section>
+
+        <p class="footer-note">
+            Wersja demonstracyjna.
+            Raporty działają lokalnie,
+            produkty są pobierane przez HTTP.
+        </p>
+    </main>
+</body>
+</html>

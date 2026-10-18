@@ -1,0 +1,30 @@
+
+# Git i Visual Studio
+.git/
+.github/
+.vs/
+**/.vs/
+
+# Dane i lokalne hasła
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Wyniki kompilacji .NET
+**/bin/
+**/obj/
+TestResults/
+coverage/
+
+# Frontend ma osobny obraz
+frontend/
+
+# Testy i dokumentacja nie są potrzebne w API
+tests/
+docs/
+
+# Pliki lokalne
+*.user
+*.suo
+*.log

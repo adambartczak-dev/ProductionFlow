@@ -1,0 +1,132 @@
+
+.draft-card {
+    max-width: 800px;
+}
+
+    .draft-card h3 {
+        margin: 0 0 8px;
+        font-size: 20px;
+    }
+
+.draft-description {
+    margin: 0 0 24px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.draft-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.draft-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+    .draft-field label {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .draft-field input,
+    .draft-field select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background-color: white;
+        color: #24324b;
+        font: inherit;
+    }
+
+        .draft-field input:focus,
+        .draft-field select:focus {
+            outline: 2px solid #93c5fd;
+            outline-offset: 1px;
+        }
+
+.draft-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 26px;
+}
+
+.draft-button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 7px;
+    background-color: #2563eb;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+}
+
+    .draft-button:hover {
+        background-color: #1d4ed8;
+    }
+
+.draft-button--secondary {
+    background-color: #64748b;
+}
+
+    .draft-button--secondary:hover {
+        background-color: #475569;
+    }
+
+.draft-error {
+    margin: 18px 0 0;
+    color: #b91c1c;
+    font-size: 14px;
+}
+
+.draft-preview {
+    margin-top: 28px;
+    padding: 20px;
+    border: 1px solid #86efac;
+    background-color: #f0fdf4;
+    border-radius: 9px;
+}
+
+    .draft-preview h4 {
+        margin: 0 0 18px;
+        color: #166534;
+    }
+
+    .draft-preview dl {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+    }
+
+        .draft-preview dl > div {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+    .draft-preview dt {
+        color: #475569;
+    }
+
+    .draft-preview dd {
+        margin: 0;
+        font-weight: 600;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .draft-preview p {
+        margin: 20px 0 0;
+        color: #166534;
+        font-size: 13px;
+    }
+
+@media (max-width: 600px) {
+    .draft-grid {
+        grid-template-columns: 1fr;
+    }
+}

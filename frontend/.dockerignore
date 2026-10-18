@@ -1,0 +1,24 @@
+
+# Zależności instalujemy w kontenerze
+node_modules/
+
+# Wyniki lokalnej kompilacji
+dist/
+
+# Visual Studio
+.vs/
+
+# Lokalna konfiguracja i hasła
+.env
+.env.*
+*.local
+
+# Playwright
+e2e/
+playwright-report/
+test-results/
+playwright/.auth/
+
+# Git i pliki tymczasowe
+.git/
+*.log

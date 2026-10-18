@@ -1,202 +1,296 @@
 
 # ProductionFlow
 
-ProductionFlow is a production order management application built
-with C# and ASP.NET Core.
+ProductionFlow is a full-stack web application for production
+order management.
 
-The project demonstrates backend development, business rules,
-PostgreSQL integration, REST API design and automated unit testing.
+The project demonstrates business application development using
+C#, ASP.NET Core, React, TypeScript and PostgreSQL.
 
-This repository is under active development.
+It includes authentication, role-based authorization, production
+workflows, execution reporting and automated testing.
 
-## Current Technologies
+## Technologies
 
+### Backend
 - C# / .NET 10
-- ASP.NET Core Web API
+- ASP.NET Core REST API
 - Entity Framework Core
 - PostgreSQL 18
-- Docker Compose
+- ASP.NET Core Identity
+- Cookie authentication and CSRF protection
+
+### Frontend
+- React
+- TypeScript
+- Vite
+- React Router
+- HTML and CSS
+
+### Testing and Infrastructure
 - xUnit
-- Git / GitHub
+- Testcontainers
+- Playwright
+- GitHub Actions
+- Docker Compose
+- nginx
 
-## Current Features
+## Features
 
-### Product and Work Center Management
+### Authentication and Authorization
 
-- Create products and work centers
-- Retrieve existing records
-- Update product and work center details
-- Validate input data
-- Prevent duplicate codes
+Three user roles are available:
+
+- Admin — administration and full production workflow
+- Planner — production order planning and release
+- Operator — execution reporting for assigned work centers
 
 ### Production Order Management
 
 - Create production orders
-- Assign products and work centers
-- Validate planned quantities and due dates
-- Filter and search orders
-- Sort and paginate results
+- Select products and work centers
+- Search, filter, sort and paginate orders
+- View order details
+- Track order change history
 
-### Order Status Workflow
+### Production Workflow
 
 Draft -> Released -> InProgress -> Completed
 
 Orders can also be cancelled from Draft or Released.
 
-Invalid status transitions are rejected.
+Invalid operations are rejected by the backend.
 
-### Production Reporting
+### Execution Reporting
 
 - Record good and scrap quantities
-- Prevent reporting beyond planned quantity
 - Calculate production progress
+- Prevent quantities exceeding the production plan
 - Complete fully reported orders
 
 ### Data Consistency
 
 - PostgreSQL transactions
-- Row-level locking for concurrent operations
-- Atomic saving of business data
-- Order change history
+- Row-level locking
+- Business validation
+- Conflict responses (HTTP 409)
+- Order history
 
-### Error Handling
+### Automated Testing
 
-- HTTP 400 for invalid requests
-- HTTP 404 for missing resources
-- HTTP 409 for business conflicts
-- ProblemDetails error responses
+- Unit tests using xUnit
+- Integration tests using Testcontainers
+- End-to-end browser tests using Playwright
 
-## Project Structure
+## Quick Start — Docker Compose
 
-- src/ProductionFlow.Api
-  - Controllers
-  - Data
-  - Domain
-  - Dtos
-  - Learning
-- tests/ProductionFlow.UnitTests
-- docs/requirements.md
-- compose.yaml
+### Requirements
 
-## Requirements
-
-- .NET 10 SDK
 - Docker Desktop
-- Visual Studio 2022 with .NET development tools
+- Docker Compose
 
-## Local Setup
+### 1. Configure environment variables
 
-### 1. PostgreSQL
+Create a `.env` file in the repository root based on
+`.env.example`.
 
-Create a `.env` file in the repository root based on `.env.example`.
+Set PostgreSQL credentials and passwords for the three
+demonstration users.
 
-Set:
+Do not commit `.env`.
 
-- POSTGRES_DB
-- POSTGRES_USER
-- POSTGRES_PASSWORD
+### 2. Build and start the application
 
-Start PostgreSQL:
-
-```powershell
-docker compose up -d
-```
-
-The database is exposed on localhost:54330.
-
-### 2. Database Connection
-
-Configure the connection string using .NET User Secrets
-in the ProductionFlow.Api project.
-
-Use the key:
-
-`ConnectionStrings:ProductionFlow`
-
-The connection string should contain:
-
-- Host: localhost
-- Port: 54330
-- Database: value from POSTGRES_DB
-- Username: value from POSTGRES_USER
-- Password: value from POSTGRES_PASSWORD
-
-Do not commit passwords or local `.env` files.
-
-### 3. Database Migrations
-
-Open Package Manager Console in Visual Studio.
-
-Run:
+Run from the repository root:
 
 ```powershell
-Update-Database -Project ProductionFlow.Api -StartupProject ProductionFlow.Api -Context ProductionFlowDbContext -Args '--environment Development'
+docker compose up --build -d
 ```
 
-### 4. Run the API
+Docker Compose starts:
 
-Set `ProductionFlow.Api` as the startup project.
+1. PostgreSQL
+2. ASP.NET Core API
+3. React frontend served by nginx
 
-Select the `http` launch profile and run the application.
+Database migrations and initial demonstration data are prepared
+automatically in the local Docker development environment.
 
-Default API address:
+Wait until all three services are running and healthy.
 
-`http://localhost:5041`
+### 3. Open ProductionFlow
 
-### 5. Test the API
+Frontend:
 
-Use the HTTP request files in:
+http://localhost:3000
 
-`src/ProductionFlow.Api`
+API:
 
-For the complete production workflow, use:
+http://localhost:8080
 
-`BackendEndToEnd.http`
+API health check:
 
-### 6. Run Unit Tests
+http://localhost:8080/health
+
+PostgreSQL is exposed locally on port 54330.
+
+### 4. Demonstration accounts
+
+| Role | Email |
+|---|---|
+| Admin | admin@productionflow.local |
+| Planner | planner@productionflow.local |
+| Operator | operator@productionflow.local |
+
+Passwords are configured in the local `.env` file.
+
+The Operator account requires a work center assignment
+to perform operations on specific production orders.
+
+### 5. Stop the application
+
+```powershell
+docker compose down
+```
+
+This preserves the PostgreSQL named volume.
+
+Warning: `docker compose down -v` removes database volumes
+and permanently deletes locally stored data.
+
+## Local Development
+
+The application can also run without Docker for the API
+and frontend.
+
+### PostgreSQL
 
 From the repository root:
+
+```powershell
+docker compose up -d postgres
+```
+
+### Backend
+
+Configure the connection string and demonstration passwords
+in the ASP.NET Core User Secrets.
+
+Start `ProductionFlow.Api` in Visual Studio using
+the `http` profile.
+
+API address:
+
+http://localhost:5041
+
+### Frontend
+
+Run from the `frontend` directory:
+
+```powershell
+npm ci
+npm run dev
+```
+
+Vite normally starts at:
+
+http://localhost:5173
+
+The development proxy forwards `/api` requests
+to the backend.
+
+## Tests
+
+### .NET Tests
+
+Run from the repository root:
 
 ```powershell
 dotnet test ProductionFlow.sln
 ```
 
-## Main API Endpoints
+Integration tests require Docker Desktop.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | /api/products | List products |
-| POST | /api/products | Create product |
-| PUT | /api/products/{id} | Update product |
-| GET | /api/workcenters | List work centers |
-| POST | /api/workcenters | Create work center |
-| PUT | /api/workcenters/{id} | Update work center |
-| GET | /api/orders | List and filter orders |
-| POST | /api/orders | Create order |
-| GET | /api/orders/{id} | Get order details |
-| POST | /api/orders/{id}/release | Release order |
-| POST | /api/orders/{id}/start | Start production |
-| POST | /api/orders/{id}/cancel | Cancel order |
-| POST | /api/orders/{id}/reports | Add execution report |
-| GET | /api/orders/{id}/reports | List execution reports |
-| GET | /api/orders/{id}/progress | Get production progress |
-| GET | /api/orders/{id}/history | Get order history |
-| POST | /api/orders/{id}/complete | Complete order |
+### Frontend Checks
 
-## Development Status
+Run from `frontend`:
 
-The PostgreSQL and backend stage is complete.
+```powershell
+npm run build
+npm run lint
+```
 
-Upcoming development:
+### Playwright
 
-- ASP.NET Core Identity and user roles
+Configure local demonstration account passwords in:
+
+`frontend/.env.e2e.local`
+
+Install Chromium:
+
+```powershell
+npx playwright install chromium
+```
+
+Run tests against the development environment:
+
+```powershell
+npx playwright test
+```
+
+For Docker Compose, set `PF_E2E_TARGET=docker`
+before running the tests.
+
+Playwright tests create real demonstration orders in PostgreSQL.
+
+## Project Structure
+
+```text
+ProductionFlow/
+├── src/
+│   └── ProductionFlow.Api/
+├── tests/
+│   ├── ProductionFlow.UnitTests/
+│   └── ProductionFlow.IntegrationTests/
+├── frontend/
+│   ├── src/
+│   ├── e2e/
+│   ├── Dockerfile
+│   └── nginx.conf
+├── docs/
+├── compose.yaml
+└── README.md
+```
+
+## Development Roadmap
+
+Completed:
+
+- Backend and PostgreSQL
 - Authentication and authorization
-- Integration tests and CI
-- React / TypeScript frontend
-- SignalR
-- RabbitMQ and background processing
-- Full Docker deployment
+- Unit and integration tests
+- GitHub Actions for .NET
+- React and TypeScript frontend
+- Playwright E2E tests
+- Docker Compose for the full application
 
-The current API is intended for local development and learning.
-Authentication and role-based access control have not yet
-been implemented.
+Planned:
+
+- Structured logging with Serilog
+- Real-time updates using SignalR
+- RabbitMQ and background processing
+- Outbox pattern
+- CSV reports
+- Performance improvements
+- Final portfolio presentation
+
+## Security Notice
+
+The Docker Compose configuration is intended for local
+demonstration and learning.
+
+It uses HTTP and development accounts.
+
+Before public deployment, production configuration,
+HTTPS, secrets management and additional security
+hardening are required.

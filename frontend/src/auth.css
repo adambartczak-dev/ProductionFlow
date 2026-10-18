@@ -1,0 +1,154 @@
+
+.login-page {
+    min-height: 100vh;
+    background-color: #f3f6fb;
+}
+
+.login-header {
+    padding: 38px 20px;
+    background-color: #172c4c;
+    color: white;
+    text-align: center;
+}
+
+    .login-header h1 {
+        margin: 0 0 8px;
+    }
+
+    .login-header p {
+        margin: 0;
+        color: #d1dbea;
+    }
+
+.login-card {
+    max-width: 440px;
+    margin: 45px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+    .login-card h2 {
+        margin: 0 0 8px;
+    }
+
+    .login-card > p {
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .login-card form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 24px;
+    }
+
+    .login-card label {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .login-card input {
+        padding: 12px;
+        margin-bottom: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        font: inherit;
+    }
+
+    .login-card button {
+        padding: 13px;
+        border: 0;
+        border-radius: 7px;
+        background-color: #2563eb;
+        color: white;
+        font: inherit;
+        cursor: pointer;
+    }
+
+        .login-card button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+.login-error {
+    color: #b91c1c;
+    font-size: 14px;
+}
+
+.login-card .login-hint {
+    margin-top: 22px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.auth-user-panel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.auth-user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    text-align: right;
+}
+
+    .auth-user-details span {
+        color: #d1dbea;
+    }
+
+.logout-button,
+.session-screen button {
+    padding: 10px 14px;
+    border: none;
+    border-radius: 7px;
+    background-color: #2563eb;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+}
+
+    .logout-button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+    }
+
+.auth-error {
+    color: #b91c1c;
+}
+
+.session-screen {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+    text-align: center;
+}
+
+    .session-screen p {
+        color: #b91c1c;
+    }
+
+@media (max-width: 600px) {
+    .login-card {
+        margin: 20px 12px;
+        padding: 22px;
+    }
+
+    .auth-user-panel {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .auth-user-details {
+        text-align: left;
+    }
+}

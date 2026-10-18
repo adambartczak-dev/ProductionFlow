@@ -1,0 +1,26 @@
+
+.catalog-message {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.catalog-error {
+    color: #b91c1c;
+}
+
+.catalog-reload-button {
+    margin-top: 18px;
+    padding: 10px 15px;
+    border: 0;
+    border-radius: 7px;
+    background-color: #2563eb;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+}
+
+    .catalog-reload-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }

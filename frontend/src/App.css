@@ -1,0 +1,257 @@
+
+.app {
+    min-height: 100vh;
+}
+
+.site-header {
+    background-color: #172c4c;
+    color: white;
+    padding: 24px 20px;
+}
+
+.header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.site-header h1 {
+    margin: 0 0 6px;
+    font-size: 27px;
+}
+
+.site-header p {
+    margin: 0;
+    color: #d1dbea;
+    font-size: 14px;
+}
+
+.technology-badge {
+    background-color: #2c4567;
+    padding: 9px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.main-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 36px 20px;
+}
+
+.page-intro {
+    margin-bottom: 28px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.page-intro h2 {
+    margin: 0 0 9px;
+    font-size: 28px;
+}
+
+.page-intro > p:last-child {
+    margin: 0;
+    color: #64748b;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr);
+    gap: 22px;
+}
+
+.card {
+    background-color: white;
+    padding: 26px;
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+}
+
+.card-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+    .card-heading h3 {
+        margin: 0;
+        font-size: 24px;
+    }
+
+.status-badge {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    padding: 9px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.product-reference {
+    color: #64748b;
+    margin: 14px 0 24px;
+    font-size: 14px;
+}
+
+.statistics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 30px;
+}
+
+.stat {
+    background-color: #f3f6fb;
+    padding: 18px 14px;
+    border-radius: 8px;
+}
+
+    .stat span {
+        display: block;
+        color: #64748b;
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    .stat strong {
+        font-size: 27px;
+    }
+
+.progress-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.progress-track {
+    background-color: #e2e8f0;
+    height: 12px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background-color: #2563eb;
+    height: 100%;
+    border-radius: 10px;
+}
+
+.remaining-text {
+    color: #64748b;
+    font-size: 14px;
+    margin: 14px 0 0;
+}
+
+.catalog-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+    .catalog-heading h3 {
+        margin: 0;
+        font-size: 19px;
+    }
+
+.product-count {
+    color: #64748b;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.product-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.product-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+    .product-item:last-child {
+        border-bottom: none;
+    }
+
+.product-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    background-color: #e8f0fc;
+    color: #2563eb;
+    font-weight: bold;
+    border-radius: 9px;
+}
+
+.product-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+    .product-details strong {
+        font-size: 14px;
+    }
+
+    .product-details span {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+.footer-note {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 30px;
+}
+
+@media (max-width: 850px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .card-heading {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .statistics {
+        grid-template-columns: 1fr;
+    }
+
+    .catalog-heading {
+        flex-wrap: wrap;
+    }
+}
