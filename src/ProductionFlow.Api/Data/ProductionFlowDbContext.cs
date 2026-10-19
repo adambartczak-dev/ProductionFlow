@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ProductionFlow.Api.Domain;
 
 namespace ProductionFlow.Api.Data;
@@ -18,6 +17,16 @@ public sealed class ProductionFlowDbContext : DbContext
 
     public DbSet<OrderHistoryEntry> OrderHistoryEntries
         => Set<OrderHistoryEntry>();
+
+    public DbSet<OutboxMessage> OutboxMessages
+        => Set<OutboxMessage>();
+
+    public DbSet<ProcessedMessage> ProcessedMessages
+        => Set<ProcessedMessage>();
+
+    // NOWE: podsumowania obliczane przez Workera.
+    public DbSet<OrderProductionSummary> OrderProductionSummaries
+        => Set<OrderProductionSummary>();
 
     public ProductionFlowDbContext(
         DbContextOptions<ProductionFlowDbContext> options)
@@ -114,7 +123,7 @@ public sealed class ProductionFlowDbContext : DbContext
             .HasField("_executionReports")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-        // Historia zmian zleceń
+        // Historia zmian
         var history = modelBuilder.Entity<OrderHistoryEntry>();
 
         history.ToTable("OrderHistoryEntries");
@@ -147,34 +156,122 @@ public sealed class ProductionFlowDbContext : DbContext
             item.ProductionOrderId,
             item.OccurredAtUtc
         });
+
+        // Transactional Outbox — Dzień 40
+        var outbox = modelBuilder.Entity<OutboxMessage>();
+
+        outbox.ToTable("OutboxMessages");
+        outbox.HasKey(item => item.Id);
+
+        outbox.Property(item => item.Id)
+            .ValueGeneratedNever();
+
+        outbox.Property(item => item.OrderId)
+            .IsRequired();
+
+        outbox.Property(item => item.EventType)
+            .HasMaxLength(100)
+            .IsRequired();
+
+        outbox.Property(item => item.Payload)
+            .HasColumnType("jsonb")
+            .IsRequired();
+
+        outbox.Property(item => item.OccurredAtUtc)
+            .IsRequired();
+
+        outbox.Property(item => item.PublishedAtUtc);
+
+        outbox.HasIndex(item => new
+        {
+            item.PublishedAtUtc,
+            item.OccurredAtUtc
+        });
+
+        // Idempotent Consumer — Dzień 42
+        var processed = modelBuilder.Entity<ProcessedMessage>();
+
+        processed.ToTable("ProcessedMessages");
+        processed.HasKey(item => item.EventId);
+
+        processed.Property(item => item.EventId)
+            .ValueGeneratedNever();
+
+        processed.Property(item => item.OrderId)
+            .IsRequired();
+
+        processed.Property(item => item.EventType)
+            .HasMaxLength(100)
+            .IsRequired();
+
+        processed.Property(item => item.ProcessedAtUtc)
+            .IsRequired();
+
+        processed.HasIndex(item => item.ProcessedAtUtc);
+
+        // NOWE: podsumowania produkcyjne — Dzień 44
+        var summary = modelBuilder.Entity<OrderProductionSummary>();
+
+        summary.ToTable("OrderProductionSummaries");
+
+        summary.HasKey(item => item.OrderId);
+
+        summary.Property(item => item.OrderId)
+            .ValueGeneratedNever();
+
+        summary.Property(item => item.Number)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        summary.Property(item => item.Status)
+            .HasConversion<int>()
+            .IsRequired();
+
+        summary.Property(item => item.PlannedQuantity)
+            .IsRequired();
+
+        summary.Property(item => item.GoodQuantity)
+            .IsRequired();
+
+        summary.Property(item => item.ScrapQuantity)
+            .IsRequired();
+
+        summary.Property(item => item.ReportsCount)
+            .IsRequired();
+
+        summary.Property(item => item.UpdatedAtUtc)
+            .IsRequired();
+
+        summary.HasOne<ProductionOrder>()
+            .WithOne()
+            .HasForeignKey<OrderProductionSummary>(
+                item => item.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
-    // Automatyczny zapis historii przy SaveChanges().
     public override int SaveChanges(
         bool acceptAllChangesOnSuccess)
     {
-        AddHistoryEntries();
+        AddHistoryAndOutboxEntries();
 
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
-    // Automatyczny zapis historii przy SaveChangesAsync().
     public override Task<int> SaveChangesAsync(
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
-        AddHistoryEntries();
+        AddHistoryAndOutboxEntries();
 
         return base.SaveChangesAsync(
             acceptAllChangesOnSuccess,
             cancellationToken);
     }
 
-    private void AddHistoryEntries()
+    private void AddHistoryAndOutboxEntries()
     {
         ChangeTracker.DetectChanges();
 
-        // Pobieramy zmiany zleceń przed dodawaniem historii.
         var changedOrders = ChangeTracker
             .Entries<ProductionOrder>()
             .ToList();
@@ -183,31 +280,39 @@ public sealed class ProductionFlowDbContext : DbContext
         {
             if (entry.State == EntityState.Added)
             {
-                OrderHistoryEntries.Add(
-                    new OrderHistoryEntry(
-                        entry.Entity.Id,
-                        "OrderCreated",
-                        $"Utworzono zlecenie {entry.Entity.Number}."));
+                RegisterOrderEvent(
+                    entry.Entity.Id,
+                    "OrderCreated",
+                    $"Utworzono zlecenie {entry.Entity.Number}.");
             }
-            else if (entry.State == EntityState.Modified &&
-                     entry.Property(item => item.Status).IsModified)
+            else if (entry.State == EntityState.Modified)
             {
-                var previousStatus = entry
-                    .Property(item => item.Status)
-                    .OriginalValue;
+                if (entry.Property(item => item.Status).IsModified)
+                {
+                    var previousStatus = entry
+                        .Property(item => item.Status)
+                        .OriginalValue;
 
-                var currentStatus = entry.Entity.Status;
+                    var currentStatus = entry.Entity.Status;
 
-                OrderHistoryEntries.Add(
-                    new OrderHistoryEntry(
+                    RegisterOrderEvent(
                         entry.Entity.Id,
                         "OrderStatusChanged",
                         $"Zmieniono status: " +
-                        $"{previousStatus} -> {currentStatus}."));
+                        $"{previousStatus} -> {currentStatus}.");
+                }
+                else if (entry.Properties.Any(
+                    property => property.IsModified))
+                {
+                    RegisterOrderEvent(
+                        entry.Entity.Id,
+                        "OrderUpdated",
+                        $"Zaktualizowano zlecenie " +
+                        $"{entry.Entity.Number}.");
+                }
             }
         }
 
-        // Rejestrujemy dodane raporty produkcyjne.
         var addedReports = ChangeTracker
             .Entries<ExecutionReport>()
             .Where(entry => entry.State == EntityState.Added)
@@ -217,13 +322,34 @@ public sealed class ProductionFlowDbContext : DbContext
         {
             var report = entry.Entity;
 
-            OrderHistoryEntries.Add(
-                new OrderHistoryEntry(
-                    report.ProductionOrderId,
-                    "ExecutionReportAdded",
-                    $"Dodano raport: dobre = {report.GoodQuantity}, " +
-                    $"braki = {report.ScrapQuantity}.",
-                    report.OperatorId));
+            RegisterOrderEvent(
+                report.ProductionOrderId,
+                "ExecutionReportAdded",
+                $"Dodano raport: dobre = {report.GoodQuantity}, " +
+                $"braki = {report.ScrapQuantity}.",
+                report.OperatorId);
         }
+    }
+
+    private void RegisterOrderEvent(
+        Guid orderId,
+        string eventType,
+        string details,
+        string? actor = null)
+    {
+        var historyEntry = new OrderHistoryEntry(
+            orderId,
+            eventType,
+            details,
+            actor);
+
+        OrderHistoryEntries.Add(historyEntry);
+
+        var outboxMessage = OutboxMessage.Create(
+            orderId,
+            eventType,
+            historyEntry.OccurredAtUtc);
+
+        OutboxMessages.Add(outboxMessage);
     }
 }

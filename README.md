@@ -1,33 +1,43 @@
 
 # ProductionFlow
 
-ProductionFlow is a full-stack web application for production
-order management.
+ProductionFlow is a full-stack web application for production order management.
 
-The project demonstrates business application development using
-C#, ASP.NET Core, React, TypeScript and PostgreSQL.
-
-It includes authentication, role-based authorization, production
-workflows, execution reporting and automated testing.
+The project demonstrates business application development, production workflows, asynchronous messaging, reliable event processing and automated testing.
 
 ## Technologies
 
 ### Backend
+
 - C# / .NET 10
 - ASP.NET Core REST API
 - Entity Framework Core
 - PostgreSQL 18
 - ASP.NET Core Identity
 - Cookie authentication and CSRF protection
+- SignalR
+- Serilog
 
 ### Frontend
+
 - React
 - TypeScript
 - Vite
 - React Router
 - HTML and CSS
 
+### Messaging
+
+- RabbitMQ 4.3
+- Worker Service
+- Transactional Outbox
+- Publisher Confirms
+- Idempotent Consumer
+- Retry Queue
+- Dead Letter Queue
+
 ### Testing and Infrastructure
+
 - xUnit
 - Testcontainers
 - Playwright
@@ -41,21 +51,22 @@ workflows, execution reporting and automated testing.
 
 Three user roles are available:
 
-- Admin — administration and full production workflow
+- Admin — administration and production workflows
 - Planner — production order planning and release
 - Operator — execution reporting for assigned work centers
 
 ### Production Order Management
 
-- Create production orders
+- Create and edit production orders
 - Select products and work centers
 - Search, filter, sort and paginate orders
-- View order details
-- Track order change history
+- View order details and history
+- Track production progress
+- Receive real-time updates using SignalR
 
 ### Production Workflow
 
-Draft -> Released -> InProgress -> Completed
+Draft → Released → InProgress → Completed
 
 Orders can also be cancelled from Draft or Released.
 
@@ -74,13 +85,90 @@ Invalid operations are rejected by the backend.
 - Row-level locking
 - Business validation
 - Conflict responses (HTTP 409)
-- Order history
+- Order change history
+
+### Reliable Messaging
+
+ProductionFlow uses RabbitMQ to process production order events asynchronously.
+
+The processing flow:
+
+1. The API saves a production order change.
+2. Transactional Outbox stores the event in PostgreSQL.
+3. OutboxPublisher reads pending events.
+4. Publisher Confirms acknowledge publication to RabbitMQ.
+5. Worker receives events and processes them.
+6. ProcessedMessages identifies duplicate EventIds.
+7. Worker updates production summaries in PostgreSQL.
+
+The summary update and EventId registration use one database transaction.
+
+Retry Queue provides delayed retries for configured processing failures.
+
+Dead Letter Queue stores messages that could not be processed successfully.
+
+The system uses at-least-once messaging semantics. Duplicate deliveries are possible and handled using idempotent processing.
+
+### Production Summaries
+
+Worker maintains OrderProductionSummaries based on source production reports.
+
+Summaries include:
+
+- Planned quantity
+- Good quantity
+- Scrap quantity
+- Number of execution reports
+- Current production order status
+
+The API provides:
+
+- GET /api/order-summaries
+- GET /api/order-summaries/export.csv
+
+Summary endpoints require Admin or Planner authorization.
+
+Summaries are eventually consistent and may be updated shortly after the original operation.
 
 ### Automated Testing
 
 - Unit tests using xUnit
-- Integration tests using Testcontainers
+- Integration tests using Testcontainers and PostgreSQL
+- Concurrent processing and duplicate message tests
 - End-to-end browser tests using Playwright
+
+## Architecture
+
+```text
+React + TypeScript
+        |
+        v
+ASP.NET Core REST API
+        |
+        v
+    PostgreSQL
+        |
+        v
+   OutboxMessages
+        |
+        v
+  OutboxPublisher
+        |
+        v
+      RabbitMQ
+        |
+        v
+   Worker Service
+        |
+        v
+    PostgreSQL
+        |
+        +-- ProcessedMessages
+        |
+        +-- OrderProductionSummaries
+```
+
+SignalR provides real-time notifications to connected browser clients.
 
 ## Quick Start — Docker Compose
 
@@ -91,11 +179,13 @@ Invalid operations are rejected by the backend.
 
 ### 1. Configure environment variables
 
-Create a `.env` file in the repository root based on
-`.env.example`.
+Create a `.env` file in the repository root based on `.env.example`.
 
-Set PostgreSQL credentials and passwords for the three
-demonstration users.
+Configure:
+
+- PostgreSQL credentials
+- Demonstration user passwords
+- RabbitMQ credentials
 
 Do not commit `.env`.
 
@@ -104,19 +194,25 @@ Do not commit `.env`.
 Run from the repository root:
 
 ```powershell
-docker compose up --build -d
+docker compose up -d --build
 ```
 
-Docker Compose starts:
+Docker Compose starts six services:
 
-1. PostgreSQL
-2. ASP.NET Core API
-3. React frontend served by nginx
+1. postgres
+2. api
+3. frontend
+4. rabbitmq
+5. worker
+6. outbox-publisher
 
-Database migrations and initial demonstration data are prepared
-automatically in the local Docker development environment.
+Database migrations and demonstration data are prepared automatically in the local Development environment.
 
-Wait until all three services are running and healthy.
+Check the services:
+
+```powershell
+docker compose ps
+```
 
 ### 3. Open ProductionFlow
 
@@ -132,6 +228,10 @@ API health check:
 
 http://localhost:8080/health
 
+RabbitMQ Management:
+
+http://localhost:15672
+
 PostgreSQL is exposed locally on port 54330.
 
 ### 4. Demonstration accounts
@@ -144,60 +244,57 @@ PostgreSQL is exposed locally on port 54330.
 
 Passwords are configured in the local `.env` file.
 
-The Operator account requires a work center assignment
-to perform operations on specific production orders.
+The Operator account requires a work center assignment for relevant production operations.
 
-### 5. Stop the application
+### 5. Messaging demonstration
+
+Publish a normal demonstration event:
+
+```powershell
+docker compose run --rm publisher DemoOrderChanged
+```
+
+Test a transient processing failure:
+
+```powershell
+docker compose run --rm publisher DemoTransientFailure
+```
+
+Test a permanent processing failure:
+
+```powershell
+docker compose run --rm publisher DemoPermanentFailure
+```
+
+Test invalid JSON handling:
+
+```powershell
+docker compose run --rm publisher DemoInvalidJson
+```
+
+Inspect Worker logs:
+
+```powershell
+docker compose logs worker --tail 80
+```
+
+Inspect OutboxPublisher logs:
+
+```powershell
+docker compose logs outbox-publisher --tail 80
+```
+
+Use RabbitMQ Management to inspect the main queue, Retry Queue and Dead Letter Queue.
+
+### 6. Stop the application
 
 ```powershell
 docker compose down
 ```
 
-This preserves the PostgreSQL named volume.
+This preserves PostgreSQL and RabbitMQ volumes.
 
-Warning: `docker compose down -v` removes database volumes
-and permanently deletes locally stored data.
-
-## Local Development
-
-The application can also run without Docker for the API
-and frontend.
-
-### PostgreSQL
-
-From the repository root:
-
-```powershell
-docker compose up -d postgres
-```
-
-### Backend
-
-Configure the connection string and demonstration passwords
-in the ASP.NET Core User Secrets.
-
-Start `ProductionFlow.Api` in Visual Studio using
-the `http` profile.
-
-API address:
-
-http://localhost:5041
-
-### Frontend
-
-Run from the `frontend` directory:
-
-```powershell
-npm ci
-npm run dev
-```
-
-Vite normally starts at:
-
-http://localhost:5173
-
-The development proxy forwards `/api` requests
-to the backend.
+Warning: `docker compose down -v` removes named volumes and their stored data.
 
 ## Tests
 
@@ -213,11 +310,11 @@ Integration tests require Docker Desktop.
 
 ### Frontend Checks
 
-Run from `frontend`:
+Run from the frontend directory:
 
 ```powershell
-npm run build
 npm run lint
+npm run build
 ```
 
 ### Playwright
@@ -226,20 +323,19 @@ Configure local demonstration account passwords in:
 
 `frontend/.env.e2e.local`
 
-Install Chromium:
+Install Chromium if necessary:
 
 ```powershell
 npx playwright install chromium
 ```
 
-Run tests against the development environment:
+For Docker Compose testing, use PowerShell:
 
 ```powershell
+$env:PF_E2E_TARGET = "docker"
 npx playwright test
+Remove-Item Env:PF_E2E_TARGET
 ```
-
-For Docker Compose, set `PF_E2E_TARGET=docker`
-before running the tests.
 
 Playwright tests create real demonstration orders in PostgreSQL.
 
@@ -248,7 +344,11 @@ Playwright tests create real demonstration orders in PostgreSQL.
 ```text
 ProductionFlow/
 ├── src/
-│   └── ProductionFlow.Api/
+│   ├── ProductionFlow.Api/
+│   ├── ProductionFlow.Messaging/
+│   ├── ProductionFlow.Publisher/
+│   ├── ProductionFlow.Worker/
+│   └── ProductionFlow.OutboxPublisher/
 ├── tests/
 │   ├── ProductionFlow.UnitTests/
 │   └── ProductionFlow.IntegrationTests/
@@ -269,28 +369,32 @@ Completed:
 - Backend and PostgreSQL
 - Authentication and authorization
 - Unit and integration tests
-- GitHub Actions for .NET
 - React and TypeScript frontend
 - Playwright E2E tests
-- Docker Compose for the full application
-
-Planned:
-
-- Structured logging with Serilog
-- Real-time updates using SignalR
+- Docker Compose
+- Serilog and SignalR
 - RabbitMQ and background processing
-- Outbox pattern
-- CSV reports
-- Performance improvements
-- Final portfolio presentation
+- Transactional Outbox
+- Publisher Confirms
+- Idempotent Consumer
+- Retry and Dead Letter Queue
+- Production summaries
+- CSV export
 
-## Security Notice
+Next:
 
-The Docker Compose configuration is intended for local
-demonstration and learning.
+- Extend CI and Docker validation
+- Performance measurements and query optimization
+- Final portfolio documentation and screenshots
+- Fresh-clone verification
+- Technical interview preparation
+
+## Security and Reliability Notice
+
+The Docker Compose configuration is intended for local development and demonstration.
 
 It uses HTTP and development accounts.
 
-Before public deployment, production configuration,
-HTTPS, secrets management and additional security
-hardening are required.
+The messaging implementation demonstrates important reliability patterns but is not a complete highly available production messaging platform.
+
+Further production hardening would include secure deployment, TLS, secret management, monitoring, advanced failure recovery and appropriate RabbitMQ queue durability strategies.

@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ProductionFlow.Api\ProductionFlow.Api.csproj" />
+    <ProjectReference Include="..\..\src\ProductionFlow.Worker\ProductionFlow.Worker.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,3 @@
-
 name: productionflow
 
 services:
@@ -56,5 +55,74 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:4.3-management
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Uzupełnij RABBITMQ_USER w .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Uzupełnij RABBITMQ_PASSWORD w .env}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: src/ProductionFlow.Worker/Dockerfile
+    environment:
+      # NOWE: dostęp do PostgreSQL.
+      ConnectionStrings__ProductionFlow: "Host=postgres;Port=5432;Database=${POSTGRES_DB:?Uzupełnij POSTGRES_DB};Username=${POSTGRES_USER:?Uzupełnij POSTGRES_USER};Password=${POSTGRES_PASSWORD:?Uzupełnij POSTGRES_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: ${RABBITMQ_USER:?Uzupełnij RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Uzupełnij RABBITMQ_PASSWORD}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  outbox-publisher:
+    build:
+      context: .
+      dockerfile: src/ProductionFlow.OutboxPublisher/Dockerfile
+    environment:
+      ConnectionStrings__ProductionFlow: "Host=postgres;Port=5432;Database=${POSTGRES_DB:?Uzupełnij POSTGRES_DB};Username=${POSTGRES_USER:?Uzupełnij POSTGRES_USER};Password=${POSTGRES_PASSWORD:?Uzupełnij POSTGRES_PASSWORD}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: ${RABBITMQ_USER:?Uzupełnij RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Uzupełnij RABBITMQ_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  publisher:
+    profiles: ["demo"]
+    build:
+      context: .
+      dockerfile: src/ProductionFlow.Publisher/Dockerfile
+    environment:
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: ${RABBITMQ_USER:?Uzupełnij RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Uzupełnij RABBITMQ_PASSWORD}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  rabbitmq_data:
