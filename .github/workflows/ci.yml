@@ -1,11 +1,9 @@
-
 name: ProductionFlow CI
 
 on:
   push:
     branches:
       - main
-
   workflow_dispatch:
 
 permissions:
@@ -22,31 +20,25 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
 
     steps:
-      # 1. Pobranie kodu repozytorium
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # 2. Instalacja .NET SDK
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
-      # 3. Sprawdzenie narzędzi
       - name: Verify environment
         run: |
           dotnet --version
           docker version
 
-      # 4. Przywrócenie pakietów NuGet
       - name: Restore dependencies
         run: dotnet restore ./ProductionFlow.sln
 
-      # 5. Kompilacja całego rozwiązania
       - name: Build solution
         run: dotnet build ./ProductionFlow.sln --configuration Release --no-restore
 
-      # 6. Testy jednostkowe
       - name: Run unit tests
         run: >-
           dotnet test ./tests/ProductionFlow.UnitTests/ProductionFlow.UnitTests.csproj
@@ -56,7 +48,6 @@ jobs:
           --logger "trx;LogFileName=unit-tests.trx"
           --results-directory ./TestResults/UnitTests
 
-      # 7. Testy integracyjne z PostgreSQL
       - name: Run integration tests
         run: >-
           dotnet test ./tests/ProductionFlow.IntegrationTests/ProductionFlow.IntegrationTests.csproj
@@ -66,7 +57,6 @@ jobs:
           --logger "trx;LogFileName=integration-tests.trx"
           --results-directory ./TestResults/IntegrationTests
 
-      # 8. Zachowanie wyników testów
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -75,3 +65,120 @@ jobs:
           path: TestResults/
           if-no-files-found: warn
           retention-days: 7
+
+  frontend-checks:
+    name: Check frontend (React / TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build React frontend
+        working-directory: frontend
+        run: npm run build
+
+  docker-e2e:
+    name: Docker Compose and Playwright
+    needs: [build-and-test, frontend-checks]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      POSTGRES_DB: productionflow_ci
+      POSTGRES_USER: productionflow_ci
+      RABBITMQ_USER: productionflow_ci
+      PF_E2E_TARGET: docker
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Playwright dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Generate temporary CI passwords
+        shell: bash
+        run: |
+          postgres_password="$(openssl rand -hex 24)"
+          rabbit_password="$(openssl rand -hex 24)"
+          admin_password="Aa1#$(openssl rand -hex 20)"
+          planner_password="Aa1#$(openssl rand -hex 20)"
+          operator_password="Aa1#$(openssl rand -hex 20)"
+
+          for password in "$postgres_password" "$rabbit_password" \
+                          "$admin_password" "$planner_password" "$operator_password"; do
+            echo "::add-mask::$password"
+          done
+
+          {
+            echo "POSTGRES_PASSWORD=$postgres_password"
+            echo "RABBITMQ_PASSWORD=$rabbit_password"
+            echo "DEMO_ADMIN_PASSWORD=$admin_password"
+            echo "DEMO_PLANNER_PASSWORD=$planner_password"
+            echo "DEMO_OPERATOR_PASSWORD=$operator_password"
+            echo "PF_E2E_ADMIN_PASSWORD=$admin_password"
+            echo "PF_E2E_PLANNER_PASSWORD=$planner_password"
+            echo "PF_E2E_OPERATOR_PASSWORD=$operator_password"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build and start all services
+        run: docker compose up --build --wait --wait-timeout 360
+
+      - name: Check API and frontend
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8080/health
+          curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3000/
+          docker compose ps
+
+      - name: Run Playwright E2E tests
+        working-directory: frontend
+        run: npx playwright test
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 100
+
+      - name: Upload Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Clean up CI containers and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans

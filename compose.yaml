@@ -53,6 +53,12 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     restart: unless-stopped
 
   rabbitmq:
@@ -79,7 +85,6 @@ services:
       context: .
       dockerfile: src/ProductionFlow.Worker/Dockerfile
     environment:
-      # NOWE: dostęp do PostgreSQL.
       ConnectionStrings__ProductionFlow: "Host=postgres;Port=5432;Database=${POSTGRES_DB:?Uzupełnij POSTGRES_DB};Username=${POSTGRES_USER:?Uzupełnij POSTGRES_USER};Password=${POSTGRES_PASSWORD:?Uzupełnij POSTGRES_PASSWORD}"
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: "5672"

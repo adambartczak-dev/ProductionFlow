@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProductionFlow.Api.Data;
 using ProductionFlow.Api.Dtos;
@@ -23,22 +22,8 @@ public sealed class OrderHistoryController : ControllerBase
         Guid orderId,
         CancellationToken cancellationToken)
     {
-        bool orderExists = await _db.ProductionOrders
-            .AsNoTracking()
-            .AnyAsync(
-                item => item.Id == orderId,
-                cancellationToken);
-
-        if (!orderExists)
-        {
-            return NotFound(new ProblemDetails
-            {
-                Status = StatusCodes.Status404NotFound,
-                Title = "Nie znaleziono zlecenia.",
-                Detail = "Zlecenie o podanym Id nie istnieje."
-            });
-        }
-
+        // Najpierw pobieramy historię. Typowe zlecenie ma co
+        // najmniej wpis OrderCreated, więc wystarczy jeden SELECT.
         var history = await _db.OrderHistoryEntries
             .AsNoTracking()
             .Where(item => item.ProductionOrderId == orderId)
@@ -52,6 +37,27 @@ public sealed class OrderHistoryController : ControllerBase
                 item.Actor,
                 item.OccurredAtUtc))
             .ToListAsync(cancellationToken);
+
+        // Przy pustej historii musimy odróżnić istniejące
+        // zlecenie od nieistniejącego (200 [] versus 404).
+        if (history.Count == 0)
+        {
+            bool orderExists = await _db.ProductionOrders
+                .AsNoTracking()
+                .AnyAsync(
+                    item => item.Id == orderId,
+                    cancellationToken);
+
+            if (!orderExists)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Status = StatusCodes.Status404NotFound,
+                    Title = "Nie znaleziono zlecenia.",
+                    Detail = "Zlecenie o podanym Id nie istnieje."
+                });
+            }
+        }
 
         return Ok(history);
     }

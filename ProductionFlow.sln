@@ -27,6 +27,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductionFlow.Worker", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductionFlow.OutboxPublisher", "src\ProductionFlow.OutboxPublisher\ProductionFlow.OutboxPublisher.csproj", "{94A4EFD1-3EE1-48CD-9ADB-D63E436E879D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{CAE4D94C-0ABD-4205-9314-1C43DFD6D483}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\measure-api.ps1 = scripts\measure-api.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
